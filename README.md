@@ -24,3 +24,7 @@ Remove this section from the readme before publishing.
 This package implements the [libdns interfaces](https://github.com/libdns/libdns) for \<PROVIDER\>, allowing you to manage DNS records.
 
 TODO: Show how to configure and use. Explain any caveats.
+
+
+
+https://git.ispconfig.org/ispconfig/ispconfig3/-/tree/develop/remoting_client/API-docs

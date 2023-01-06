@@ -1,4 +1,4 @@
-module github.com/libdns/template
+module github.com/phste/libdns_ispconfig
 
 go 1.18
 
