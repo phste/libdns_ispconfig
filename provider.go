@@ -1,6 +1,6 @@
-// Package libdnstemplate implements a DNS record management client compatible
-// with the libdns interfaces for <PROVIDER NAME>. TODO: This package is a
-// template only. Customize all godocs for actual implementation.
+// Package libdns_ispconfig implements a DNS record management client compatible
+// with the libdns interfaces for ISPConfig. TODO: Implement other entry types.
+// This package only implements the management of TXT entries for ACME DNS challenges.
 package libdns_ispconfig
 
 import (
@@ -18,13 +18,7 @@ import (
 	"github.com/libdns/libdns"
 )
 
-// TODO: Providers must not require additional provisioning steps by the callers; it
-// should work simply by populating a struct and calling methods on it. If your DNS
-// service requires long-lived state or some extra provisioning step, do it implicitly
-// when methods are called; sync.Once can help with this, and/or you can use a
-// sync.(RW)Mutex in your Provider struct to synchronize implicit provisioning.
-
-// Provider facilitates DNS record manipulation with <TODO: PROVIDER NAME>.
+// Provider facilitates DNS record manipulation with ISPConfig.
 type Provider struct {
 	Endpoint string `json:"endpoint"`
 	Username string `json:"username"`
@@ -61,15 +55,15 @@ type response struct {
 }
 
 type changeParams struct {
-	ServerId     int           `json:"server_id"`
-	Name         string        `json:"name"`
-	Active       string        `json:"active"`
-	Type         string        `json:"type"`
-	Data         string        `json:"data"`
-	ZoneId       int           `json:"zone"`
-	TTL          time.Duration `json:"ttl"`
-	UpdateSerial bool          `json:"update_serial"`
-	Stamp        string        `json:"stamp"`
+	ServerId     int    `json:"server_id"`
+	Name         string `json:"name"`
+	Active       string `json:"active"`
+	Type         string `json:"type"`
+	Data         string `json:"data"`
+	ZoneId       int    `json:"zone"`
+	TTL          int    `json:"ttl"`
+	UpdateSerial bool   `json:"update_serial"`
+	Stamp        string `json:"stamp"`
 }
 
 type changeRequest struct {
@@ -152,6 +146,10 @@ func (p *Provider) getZoneId(ctx context.Context, origin string) int {
 		panic("Not logged in.")
 	}
 
+	if origin[len(origin)-1:] == "." {
+		origin = origin[:len(origin)-1]
+	}
+
 	data := p.apiRequest(ctx, "dns_zone_get_id", zoneIdRequest{SessionId: p.sessionId, Origin: origin})
 
 	return int(data.Response.(float64))
@@ -207,6 +205,13 @@ func (p *Provider) AppendRecords(ctx context.Context, zone string, records []lib
 	var addedRecords []libdns.Record
 	for _, record := range records {
 		if strings.ToLower(record.Type) == "txt" {
+
+			ttl := int(record.TTL)
+
+			if ttl == 0 {
+				ttl = 60
+			}
+
 			change := changeRequest{
 				SessionId: p.sessionId,
 				ClientId:  nil,
@@ -218,7 +223,7 @@ func (p *Provider) AppendRecords(ctx context.Context, zone string, records []lib
 					Type:         "TXT",
 					Data:         record.Value,
 					ZoneId:       zoneId,
-					TTL:          record.TTL,
+					TTL:          ttl,
 					UpdateSerial: true,
 					Stamp:        time.Now().Format("2006-01-02 15:04:05"),
 				},
@@ -244,6 +249,12 @@ func (p *Provider) SetRecords(ctx context.Context, zone string, records []libdns
 	var addedRecords []libdns.Record
 	for _, record := range records {
 		if strings.ToLower(record.Type) == "txt" {
+			ttl := int(record.TTL)
+
+			if ttl == 0 {
+				ttl = 60
+			}
+
 			change := changeRequest{
 				SessionId: p.sessionId,
 				ClientId:  nil,
@@ -255,7 +266,7 @@ func (p *Provider) SetRecords(ctx context.Context, zone string, records []libdns
 					Type:         "TXT",
 					Data:         record.Value,
 					ZoneId:       zoneId,
-					TTL:          record.TTL,
+					TTL:          ttl,
 					UpdateSerial: true,
 					Stamp:        time.Now().Format("2006-01-02 15:04:05"),
 				},
